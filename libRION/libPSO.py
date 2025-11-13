@@ -24,13 +24,15 @@ class PSO:
         self.social_coeff = social_coeff
 
         self.dim = self.data.shape[1]
-        self.positions = np.copy(self.data)
-        self.velocities = np.random.uniform(-1, 1, (num_particles, self.dim))
+        
+        # Cast to float64 to avoid casting errors
+        self.positions = np.copy(self.data).astype(np.float64)
+        self.velocities = np.random.uniform(-1, 1, (num_particles, self.dim)).astype(np.float64)
 
         # Initialize personal best positions and global best position
-        self.personal_best_positions = np.copy(self.positions)
+        self.personal_best_positions = np.copy(self.positions).astype(np.float64)
         self.personal_best_scores = np.array([self.obj_func(x) for x in self.positions])
-        self.global_best_position = self.personal_best_positions[np.argmin(self.personal_best_scores)]
+        self.global_best_position = self.personal_best_positions[np.argmin(self.personal_best_scores)].astype(np.float64)
         self.global_best_score = np.min(self.personal_best_scores)
 
     def optimize(self):
@@ -55,4 +57,3 @@ class PSO:
             print(f"Iteration {i+1}/{self.max_iter}, Global Best Score: {self.global_best_score}")
 
         return self.global_best_position, self.global_best_score
-
