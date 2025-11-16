@@ -3,11 +3,12 @@ Optimisation Techniques to improve the ranking of department in terms of researc
 
 ## Optimisation Techniques and Parallel Computing
 This project aims to suggest a hybrid algorithm to perform Multi Objective Optimisation to increase the department rankings based on the research papers published and shown at major tier-1 conferences. We define the following three fitness functions:
-1. maximise $O_1(x) = \cfrac{\text{papers}_{\texttt{T1}}}{\text{research}_{\texttt{FTE}}}$
+1. $\max O_1(x) = \text{Tier 1 Papers} /
+\text{research}_{FTE}$
 
-2. maximise $O_2(x) = \cfrac{\sum_{i}w_i\cdot \texttt{cite}\%}{\text{research}_{\texttt{FTE}}}$
+2. $\max O_2(x) = \cfrac{1}{\text{research}_{FTE}}\cdot\sum_i w_i \cdot \text{cite}\%$
 
-3. minimise $O_3(x) = \cfrac{\text{research budget}}{O_2(x) + \epsilon}$
+3. $\min O_3(x) = \cfrac{\text{research budget}}{O_2(x) + \epsilon}$
 
 The optimiser must explore feasible solutions that satisfy constraints such as:
 * Minimum faculty strength
@@ -32,8 +33,14 @@ The RION (Research Innovation Societal Optimisation Network) is a hybrid multi-o
     * All offspring values in that column act as particles in a PSO swarm.
     * PSO updates particle positions for a fixed number of iterations.
 
-    PSO Objective function: $$\texttt{PSO\_fitness}(x) = \sum_{i = 1}^3O_i(x) + p\cdot\texttt{cv}(x)$$
-    where $p$ is the penalty for violating constraints (scaling factor) and $\texttt{cv}(x)$ is the constraint violation function which just is the fraction of the budget which is violated. $$\texttt{cv}(x) = \sum_{a\,\in\,x.columns} \min\left(0, \cfrac{minv[a] - x[a]}{|minv[a]|}\right) + \max\left(0, \cfrac{x[a] - maxv[a]}{|maxv[a]|}\right)$$
+    PSO Objective function:
+    
+    $$\mathrm{PSO\_fitness}(x) = \sum_{i=1}^3 O_i(x) + p \cdot \mathrm{cv}(x)$$
+    
+    where $p$ is the penalty for violating constraints (scaling factor) and $\mathrm{cv}(x)$ is the constraint violation function, the fraction of the budget violated.
+
+    $$\mathrm{cv}(x) = \sum_{a \in \text{columns}(x)}\min\left(0,\,\frac{\mathrm{minv}[a] - x[a]}{|\mathrm{minv}[a]|}\right)+\max\left(0,\,\frac{x[a] - \mathrm{maxv}[a]}{|\mathrm{maxv}[a]|}\right)$$
+
 
 4. Final output: After all generations:
     * The final population contains non-dominated, diverse, constraint-satisfying solutions.
