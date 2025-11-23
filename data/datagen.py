@@ -69,5 +69,5 @@ df = pd.DataFrame({
 
 # Save CSV
 df.to_csv("department_research_data.csv", index=False)
-print("✅ CSV generated: department_research_data.csv")
+print("CSV generated: department_research_data.csv")
 print(df.head())
