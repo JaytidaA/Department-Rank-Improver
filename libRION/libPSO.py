@@ -1,7 +1,9 @@
 import numpy as np
 
 class PSO:
-    def __init__ (self, obj_func, data, num_particles=30, max_iter=100, inertia_weight=0.5, cognitive_coeff=1.5, social_coeff=1.5):
+    def __init__(self, obj_func, data, num_particles=30, max_iter=100, 
+                 inertia_weight=0.5, cognitive_coeff=1.5, social_coeff=1.5,
+                 lower_bounds=None, upper_bounds=None):
         """
         Initialize the PSO optimizer.
 
@@ -13,6 +15,8 @@ class PSO:
         - inertia_weight: inertia weight for velocity update
         - cognitive_coeff: cognitive coefficient
         - social_coeff: social coefficient
+        - lower_bounds: array of lower bounds for each dimension (optional)
+        - upper_bounds: array of upper bounds for each dimension (optional)
         """
 
         self.obj_func = obj_func
@@ -25,9 +29,30 @@ class PSO:
 
         self.dim = self.data.shape[1]
         
+        # Set bounds - infer from data if not provided
+        if lower_bounds is None:
+            data_min = np.min(data, axis=0)
+            data_range = np.max(data, axis=0) - data_min
+            self.lower_bounds = data_min - 0.5 * np.abs(data_range)
+        else:
+            self.lower_bounds = np.asarray(lower_bounds, dtype=np.float64)
+        
+        if upper_bounds is None:
+            data_max = np.max(data, axis=0)
+            data_range = data_max - np.min(data, axis=0)
+            self.upper_bounds = data_max + 0.5 * np.abs(data_range)
+        else:
+            self.upper_bounds = np.asarray(upper_bounds, dtype=np.float64)
+        
+        # Calculate vmax as 20% of search space range
+        self.vmax = 0.2 * (self.upper_bounds - self.lower_bounds)
+        
         # Cast to float64 to avoid casting errors
         self.positions = np.copy(self.data).astype(np.float64)
         self.velocities = np.random.uniform(-1, 1, (num_particles, self.dim)).astype(np.float64)
+        
+        # Clamp initial velocities
+        self.velocities = np.clip(self.velocities, -self.vmax, self.vmax)
 
         # Initialize personal best positions and global best position
         self.personal_best_positions = np.copy(self.positions).astype(np.float64)
@@ -42,8 +67,14 @@ class PSO:
                 cognitive = self.cognitive_coeff * r1 * (self.personal_best_positions[p] - self.positions[p])
                 social = self.social_coeff * r2 * (self.global_best_position - self.positions[p])
                 self.velocities[p] = (self.inertia_weight * self.velocities[p] + cognitive + social)
+                
+                # Velocity clamping
+                self.velocities[p] = np.clip(self.velocities[p], -self.vmax, self.vmax)
 
                 self.positions[p] += self.velocities[p]
+                
+                # Position clamping
+                self.positions[p] = np.clip(self.positions[p], self.lower_bounds, self.upper_bounds)
 
                 new_score = self.obj_func(self.positions[p])
                 if new_score < self.personal_best_scores[p]:

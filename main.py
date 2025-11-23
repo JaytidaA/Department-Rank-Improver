@@ -58,6 +58,8 @@ def define_objective_functions():
         citation_percentile_avg = individual.get('citation_percentile_avg', 0.5)
         
         impact_score = papers_t1 * citation_percentile_avg
+        if impact_score < 1.0:
+            return 1e5
         cost_per_impact = research_budget / (impact_score + 1e-6)
         return cost_per_impact
     

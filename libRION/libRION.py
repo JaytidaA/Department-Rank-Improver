@@ -3,11 +3,15 @@
 from typing import Any, Callable, List, Tuple
 import random
 
+# Parallelism
+import ctypes
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from libRION.libPSO import PSO
+# from libRION.libPSO import PSO
+from libRION.libPSO_parallel import PSO
 
 class RionOptimiser:
     """This is the main class for the RionOptimiser
@@ -256,6 +260,19 @@ class RionOptimiser:
         # Extract the column data as a 2D numpy array for PSO
         positions = offspring[[random_col]].values
 
+        # Get bounds for this specific attribute from constraints
+        # constraints[col_index] = [min, max] for this column
+        if self.constraints and col_index < len(self.constraints):
+            lower_bound = np.array([self.constraints[col_index][0]], dtype=np.float64)
+            upper_bound = np.array([self.constraints[col_index][1]], dtype=np.float64)
+        else:
+            # Fallback: infer from data with 50% expansion
+            col_min = positions.min()
+            col_max = positions.max()
+            col_range = col_max - col_min
+            lower_bound = np.array([col_min - 0.5 * col_range], dtype=np.float64)
+            upper_bound = np.array([col_max + 0.5 * col_range], dtype=np.float64)
+
         # Define objective function for PSO
         # This function evaluates the sum of all optimizer functions for an individual
         def pso_objective(x):
@@ -267,11 +284,11 @@ class RionOptimiser:
             total_fitness = sum(func(temp_individual) for func in self.optimiser_funcs)
             
             # Add constraint penalty
-            constraint_penalty = self._constraint_violate(temp_individual) * 1000
+            constraint_penalty = self._constraint_violate(temp_individual) * 100
             
             return total_fitness + constraint_penalty
 
-        # Initialize and run PSO
+        # Initialize and run PSO with bounds
         pso = PSO(
             obj_func=pso_objective,
             data=positions,
@@ -279,7 +296,9 @@ class RionOptimiser:
             max_iter=self.__pso_iterations,
             inertia_weight=self.__pso_inertia,
             cognitive_coeff=self.__pso_self_conf,
-            social_coeff=self.__pso_cross_conf
+            social_coeff=self.__pso_cross_conf,
+            lower_bounds=lower_bound,
+            upper_bounds=upper_bound
         )
 
         # Run PSO optimization (suppress output)
