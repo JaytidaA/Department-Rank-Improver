@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from libRION.libRION import RionOptimiser
 
 
@@ -125,26 +126,26 @@ def main():
         # Drop college_id column if it exists
         if 'college_id' in df.columns:
             df = df.drop(columns=['college_id'])
-            print(f"✓ Dropped 'college_id' column")
+            print(f" Dropped 'college_id' column")
         
-        print(f"✓ Dataset loaded: {df.shape[0]} rows × {df.shape[1]} columns")
+        print(f" Dataset loaded: {df.shape[0]} rows × {df.shape[1]} columns")
         print(f"  Columns: {list(df.columns)}")
         print(f"\nFirst row sample:")
         print(df.head(1).to_string())
     except Exception as e:
-        print(f"✗ Error loading dataset: {e}")
+        print(f" Error loading dataset: {e}")
         return
     
     # Define objective functions
     objective_funcs = define_objective_functions()
-    print(f"\n✓ Defined {len(objective_funcs)} objective functions:")
+    print(f"\n Defined {len(objective_funcs)} objective functions:")
     print(f"  1. Research Productivity (papers/FTE)")
     print(f"  2. Research Quality (impact/FTE)")
     print(f"  3. Cost Efficiency (budget/impact)")
     
     # Define constraints
     constraints = define_constraints()
-    print(f"\n✓ Defined {len(constraints)} constraints matching dataset columns")
+    print(f"\nDefined {len(constraints)} constraints matching dataset columns")
     
     # Initialize RION Optimizer
     print("\n" + "="*70)
@@ -152,7 +153,7 @@ def main():
     print("="*70)
     
     optimizer = RionOptimiser(
-        generations=20,
+        generations=40,
         pop_size=50,
         inertia=0.5,
         self_confidence=1.5,
@@ -161,7 +162,7 @@ def main():
     )
     
     print("Configuration:")
-    print(f"  Generations:     20")
+    print(f"  Generations:     40")
     print(f"  Population Size: 50")
     print(f"  PSO Inertia:     0.5")
     print(f"  PSO Cognitive:   1.5")
@@ -204,6 +205,64 @@ def main():
             print(f"{idx+1:<10d} {-obj_vals[0]:<15.3f} {-obj_vals[1]:<15.3f} {obj_vals[2]:<15.2e}")
     
     print("\n" + "="*70)
+
+        # ===== Additional Pareto Visualization & Metrics =====
+
+    print("\nCalculating Pareto Front and Metrics...")
+
+    # Compute objective values matrix for final population
+    objective_values = np.array([[func(ind) for func in objective_funcs] 
+                                 for _, ind in optimized_population.iterrows()])
+
+    # Extract Pareto front (front 0)
+    fronts, ranks = optimizer._fast_non_dominated_sort(optimized_population)
+    pareto_front_indices = fronts[0]
+    pareto_front = objective_values[pareto_front_indices]
+
+    # Convert maximization objectives (1 & 2) to negative for plotting
+    plot_values = pareto_front.copy()
+    plot_values[:,0] = -plot_values[:,0]  # productivity max
+    plot_values[:,1] = -plot_values[:,1]  # quality max
+
+    # -------- 3D Pareto Scatter Plot --------
+    from mpl_toolkits.mplot3d import Axes3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    ax.scatter(-objective_values[:,0], -objective_values[:,1], objective_values[:,2], alpha=0.4, label="All Solutions")
+    ax.scatter(plot_values[:,0], plot_values[:,1], plot_values[:,2], color='red', label="Pareto Front")
+
+    ax.set_title("Pareto Front (3 Objectives)")
+    ax.set_xlabel("Research Productivity (Max)")
+    ax.set_ylabel("Research Quality (Max)")
+    ax.set_zlabel("Cost Efficiency (Min)")
+
+    plt.legend()
+    plt.show()
+
+    # -------- Diversity Metric --------
+    def diversity_metric(pareto):
+        pareto = pareto[pareto[:,0].argsort()]
+        distances = np.linalg.norm(pareto[1:] - pareto[:-1], axis=1)
+        return np.std(distances)
+
+    diversity = diversity_metric(pareto_front)
+    print(f"\nDiversity Spread Metric: {diversity:.4f}")
+
+    # -------- Hypervolume --------
+    ref_point = np.max(plot_values, axis=0) + 1.0
+    def hypervolume(front, ref):
+        hv = 0
+        front = front[front[:,0].argsort()]
+        for i in range(len(front) - 1):
+            hv += abs(front[i+1][0] - front[i][0]) * \
+                  abs(ref[1] - front[i][1]) * \
+                  abs(ref[2] - front[i][2])
+        return hv
+
+    hv = hypervolume(plot_values, ref_point)
+    print(f"Hypervolume: {hv:.4f}")
+
 
 
 if __name__ == "__main__":

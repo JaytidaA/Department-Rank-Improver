@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # from libRION.libPSO import PSO
-from libRION.libPSO_parallel import PSO
+from libRION.libPSO import PSO
 
 class RionOptimiser:
     """This is the main class for the RionOptimiser
